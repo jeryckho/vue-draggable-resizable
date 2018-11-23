@@ -1,6 +1,6 @@
 {
   "name": "vue-draggable-resizable",
-  "version": "1.7.5",
+  "version": "1.7.6",
   "description": "Vue2 Component for resizable and draggable elements",
   "author": "Maurizio Bonani <maurizio.bonani@gmail.com>",
   "main": "dist/index.js",
@@ -11,6 +11,7 @@
     "build": "webpack --config build/webpack.dist.js",
     "unit": "cross-env BABEL_ENV=test karma start test/unit/karma.conf.js --single-run",
     "test": "npm run unit",
+    "postinstall": "webpack --config build/webpack.dist.js",
     "lint": "eslint --ext .js,.vue src test/unit/specs"
   },
   "repository": {
