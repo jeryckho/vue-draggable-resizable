@@ -93,13 +93,20 @@ export default {
         return valid
       }
     },
+    r: {
+      type: Number,
+      default: 0,
+      validator: function (val) {
+        return typeof val === 'number'
+      }
+    },
     handles: {
       type: Array,
       default: function () {
-        return ['tl', 'tm', 'tr', 'mr', 'br', 'bm', 'bl', 'ml']
+        return ['tl', 'tm', 'tr', 'mr', 'br', 'bm', 'bl', 'ml', 'rot']
       },
       validator: function (val) {
-        var s = new Set(['tl', 'tm', 'tr', 'mr', 'br', 'bm', 'bl', 'ml'])
+        var s = new Set(['tl', 'tm', 'tr', 'mr', 'br', 'bm', 'bl', 'ml', 'rot'])
 
         return new Set(val.filter(h => s.has(h))).size === val.length
       }
@@ -194,7 +201,8 @@ export default {
       dragging: false,
       enabled: this.active,
       handle: null,
-      zIndex: this.z
+      zIndex: this.z,
+      degree: this.r
     }
   },
 
@@ -223,7 +231,7 @@ export default {
       this.elmW = this.width
       this.elmH = this.height
 
-      this.$emit('resizing', this.left, this.top, this.width, this.height)
+      this.$emit('resizing', this.left, this.top, this.width, this.height, this.degree)
     },
     elmDown: function (e) {
       const target = e.target || e.srcElement
@@ -339,7 +347,7 @@ export default {
           }
         }
 
-        this.$emit('resizing', this.left, this.top, this.width, this.height)
+        this.$emit('resizing', this.left, this.top, this.width, this.height, this.degree)
       }
 
       window.requestAnimationFrame(animate)
@@ -365,39 +373,48 @@ export default {
       let dY = diffY
 
       if (this.resizing) {
-        if (this.handle.indexOf('t') >= 0) {
-          if (this.elmH - dY < this.minh) this.mouseOffY = (dY - (diffY = this.elmH - this.minh))
-          else if (this.parent && this.elmY + dY < this.parentY) this.mouseOffY = (dY - (diffY = this.parentY - this.elmY))
-          this.elmY += diffY
-          this.elmH -= diffY
+        if (this.handle === "rot") {
+          this.active = true;
+          let radians = Math.atan2(
+            this.mouseX - (this.elmX + this.elmW / 2),
+            this.mouseY - (this.elmY + this.elmH / 2)
+          );
+          let degree = radians * (180 / Math.PI) * -1;
+          this.degree = Math.floor((degree + 360) % 360);
+        } else {
+          if (this.handle.indexOf('t') >= 0) {
+            if (this.elmH - dY < this.minh) this.mouseOffY = (dY - (diffY = this.elmH - this.minh))
+            else if (this.parent && this.elmY + dY < this.parentY) this.mouseOffY = (dY - (diffY = this.parentY - this.elmY))
+            this.elmY += diffY
+            this.elmH -= diffY
+          }
+
+          if (this.handle.indexOf('b') >= 0) {
+            if (this.elmH + dY < this.minh) this.mouseOffY = (dY - (diffY = this.minh - this.elmH))
+            else if (this.parent && this.elmY + this.elmH + dY > this.parentH) this.mouseOffY = (dY - (diffY = this.parentH - this.elmY - this.elmH))
+            this.elmH += diffY
+          }
+
+          if (this.handle.indexOf('l') >= 0) {
+            if (this.elmW - dX < this.minw) this.mouseOffX = (dX - (diffX = this.elmW - this.minw))
+            else if (this.parent && this.elmX + dX < this.parentX) this.mouseOffX = (dX - (diffX = this.parentX - this.elmX))
+            this.elmX += diffX
+            this.elmW -= diffX
+          }
+
+          if (this.handle.indexOf('r') >= 0) {
+            if (this.elmW + dX < this.minw) this.mouseOffX = (dX - (diffX = this.minw - this.elmW))
+            else if (this.parent && this.elmX + this.elmW + dX > this.parentW) this.mouseOffX = (dX - (diffX = this.parentW - this.elmX - this.elmW))
+            this.elmW += diffX
+          }
+
+          this.left = (Math.round(this.elmX / this.grid[0]) * this.grid[0])
+          this.top = (Math.round(this.elmY / this.grid[1]) * this.grid[1])
+
+          this.width = (Math.round(this.elmW / this.grid[0]) * this.grid[0])
+          this.height = (Math.round(this.elmH / this.grid[1]) * this.grid[1])
         }
-
-        if (this.handle.indexOf('b') >= 0) {
-          if (this.elmH + dY < this.minh) this.mouseOffY = (dY - (diffY = this.minh - this.elmH))
-          else if (this.parent && this.elmY + this.elmH + dY > this.parentH) this.mouseOffY = (dY - (diffY = this.parentH - this.elmY - this.elmH))
-          this.elmH += diffY
-        }
-
-        if (this.handle.indexOf('l') >= 0) {
-          if (this.elmW - dX < this.minw) this.mouseOffX = (dX - (diffX = this.elmW - this.minw))
-          else if (this.parent && this.elmX + dX < this.parentX) this.mouseOffX = (dX - (diffX = this.parentX - this.elmX))
-          this.elmX += diffX
-          this.elmW -= diffX
-        }
-
-        if (this.handle.indexOf('r') >= 0) {
-          if (this.elmW + dX < this.minw) this.mouseOffX = (dX - (diffX = this.minw - this.elmW))
-          else if (this.parent && this.elmX + this.elmW + dX > this.parentW) this.mouseOffX = (dX - (diffX = this.parentW - this.elmX - this.elmW))
-          this.elmW += diffX
-        }
-
-        this.left = (Math.round(this.elmX / this.grid[0]) * this.grid[0])
-        this.top = (Math.round(this.elmY / this.grid[1]) * this.grid[1])
-
-        this.width = (Math.round(this.elmW / this.grid[0]) * this.grid[0])
-        this.height = (Math.round(this.elmH / this.grid[1]) * this.grid[1])
-
-        this.$emit('resizing', this.left, this.top, this.width, this.height)
+        this.$emit('resizing', this.left, this.top, this.width, this.height, this.degree)
       } else if (this.dragging) {
         if (this.parent) {
           if (this.elmX + dX < this.parentX) this.mouseOffX = (dX - (diffX = this.parentX - this.elmX))
@@ -428,7 +445,7 @@ export default {
       this.handle = null
       if (this.resizing) {
         this.resizing = false
-        this.$emit('resizestop', this.left, this.top, this.width, this.height)
+        this.$emit('resizestop', this.left, this.top, this.width, this.height, this.degree)
       }
       if (this.dragging) {
         this.dragging = false
@@ -447,7 +464,12 @@ export default {
         left: this.left + 'px',
         width: this.width + 'px',
         height: this.height + 'px',
-        zIndex: this.zIndex
+        zIndex: this.zIndex,
+        transform: "rotate(" + this.degree + "deg)",
+        "-moz-transform": "rotate(" + this.degree + "deg)",
+        "-webkit-transform": "rotate(" + this.degree + "deg)",
+        "-o-transform": "rotate(" + this.degree + "deg)",
+        "-ms-transform": "rotate(" + this.degree + "deg)"
       }
     }
   },
@@ -518,6 +540,43 @@ export default {
     left: 50%;
     margin-left: -5px;
     cursor: s-resize;
+  }
+  .handle-rot {
+    bottom: -45px;
+    left: 50%;
+    margin-left: -5px;
+    -webkit-border-radius: 50%;
+    -moz-border-radius: 50%;
+    border-radius: 50%;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+  }
+  .handle-rot:before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -20px;
+    width: 0;
+    height: 20px;
+    margin-left: -1px;
+    border-left: 1px dashed #3f4652;
+    background-color: #fff;
+  }
+  .handle-rot:after {
+    content: "";
+    background-color: #fff;
+    background-image: url(https://cdn.rawgit.com/berkaygure/19b8f05102fb11f57fff1cf3f3a2fc48/raw/6f7a11dd1ea612ce7392c1b6d7ccbabb6404e489/icon_rotate.svg);
+    background-size: 14px 14px;
+    background-repeat: no-repeat;
+    background-position: 1px 2px;
+    position: absolute;
+    left: 1px;
+    top: 1px;
+    width: 16px;
+    height: 16px;
+    border-radius: 16px;
+    box-shadow: 0 0 3px 1px rgba(0, 0, 0, 0.15);
   }
   .handle-br {
     bottom: -10px;
